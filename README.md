@@ -13,7 +13,7 @@ Default hotkeys:
 
 ## Sources
 - Bible-niv-main was taken from https://github.com/aruljohn/Bible-niv/tree/main
-- jsongo.vs.ahk was taken from https://github.com/GroggyOtter/jsongo_AHKv2
+- jsongo.v2.ahk was taken from https://github.com/GroggyOtter/jsongo_AHKv2
 
 ## How To Change Translations
 The script is hardcoded to read the JSON structure from aruljohn. They also have a KJV (https://github.com/aruljohn/Bible-kjv), which will work as is. I also intend to write a function to translate the JSON structure from https://github.com/jadenzaleski/BibleTranslations/tree/master to work with the script.
