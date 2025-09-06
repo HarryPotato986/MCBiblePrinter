@@ -1,8 +1,154 @@
 ﻿#Requires AutoHotkey v2.0
 #Include jsongo.v2.ahk
 
-booksJson := FileRead("Bible-niv-main/Books.json")
-bookOrder := jsongo.Parse(booksJson)
+newBookSleep := 3 ;In seconds
+
+BibleFolder := DirSelect(,2,"Select Bible Location")
+if BibleFolder == "" {
+    BibleFolder := "Bible-niv-main"
+}
+
+if FileExist(BibleFolder . "\Psalms.json") { 
+    ;Psalms
+    bookOrder := [
+    "Genesis",
+    "Exodus",
+    "Leviticus",
+    "Numbers",
+    "Deuteronomy",
+    "Joshua",
+    "Judges",
+    "Ruth",
+    "1 Samuel",
+    "2 Samuel",
+    "1 Kings",
+    "2 Kings",
+    "1 Chronicles",
+    "2 Chronicles",
+    "Ezra",
+    "Nehemiah",
+    "Esther",
+    "Job",
+    "Psalms",
+    "Proverbs",
+    "Ecclesiastes",
+    "Song Of Solomon",
+    "Isaiah",
+    "Jeremiah",
+    "Lamentations",
+    "Ezekiel",
+    "Daniel",
+    "Hosea",
+    "Joel",
+    "Amos",
+    "Obadiah",
+    "Jonah",
+    "Micah",
+    "Nahum",
+    "Habakkuk",
+    "Zephaniah",
+    "Haggai",
+    "Zechariah",
+    "Malachi",
+    "Matthew",
+    "Mark",
+    "Luke",
+    "John",
+    "Acts",
+    "Romans",
+    "1 Corinthians",
+    "2 Corinthians",
+    "Galatians",
+    "Ephesians",
+    "Philippians",
+    "Colossians",
+    "1 Thessalonians",
+    "2 Thessalonians",
+    "1 Timothy",
+    "2 Timothy",
+    "Titus",
+    "Philemon",
+    "Hebrews",
+    "James",
+    "1 Peter",
+    "2 Peter",
+    "1 John",
+    "2 John",
+    "3 John",
+    "Jude",
+    "Revelation"
+    ]
+} else { 
+    ;Psalm
+    bookOrder := [
+    "Genesis",
+    "Exodus",
+    "Leviticus",
+    "Numbers",
+    "Deuteronomy",
+    "Joshua",
+    "Judges",
+    "Ruth",
+    "1 Samuel",
+    "2 Samuel",
+    "1 Kings",
+    "2 Kings",
+    "1 Chronicles",
+    "2 Chronicles",
+    "Ezra",
+    "Nehemiah",
+    "Esther",
+    "Job",
+    "Psalm",
+    "Proverbs",
+    "Ecclesiastes",
+    "Song Of Solomon",
+    "Isaiah",
+    "Jeremiah",
+    "Lamentations",
+    "Ezekiel",
+    "Daniel",
+    "Hosea",
+    "Joel",
+    "Amos",
+    "Obadiah",
+    "Jonah",
+    "Micah",
+    "Nahum",
+    "Habakkuk",
+    "Zephaniah",
+    "Haggai",
+    "Zechariah",
+    "Malachi",
+    "Matthew",
+    "Mark",
+    "Luke",
+    "John",
+    "Acts",
+    "Romans",
+    "1 Corinthians",
+    "2 Corinthians",
+    "Galatians",
+    "Ephesians",
+    "Philippians",
+    "Colossians",
+    "1 Thessalonians",
+    "2 Thessalonians",
+    "1 Timothy",
+    "2 Timothy",
+    "Titus",
+    "Philemon",
+    "Hebrews",
+    "James",
+    "1 Peter",
+    "2 Peter",
+    "1 John",
+    "2 John",
+    "3 John",
+    "Jude",
+    "Revelation"
+    ]
+}
 
 bible := LoadBooksFromJson(bookOrder)
 ChunkedBible := ChunkBooksIntoPages()
@@ -12,12 +158,32 @@ ChunkedBible := ChunkBooksIntoPages()
 
 LoadBooksFromJson(bookOrder) {
     tempMap := Map()
-
     for book in bookOrder {
-        ;MsgBox(each)
-        tempBookJson := FileRead("Bible-niv-main/" . book . ".json", "UTF-8")
+        tempBookJson := FileRead(BibleFolder . "\" . book . ".json", "UTF-8")
         tempMap[book] := jsongo.Parse(tempBookJson)
-        ;tempMap.Set(book,jsongo.Parse(tempBookJson))
+        if tempMap[book].Has(book) { ;converts from different JSON format
+            tempMap[book]["chapters"] := []
+            j := 1
+            while j <= tempMap[book][book].count {
+                verses := tempMap[book][book][String(j)]
+                chpMap := Map()
+                chpMap["chapter"] := String(j)
+                chpMap["verses"] := []
+                i := 1
+                while i <= verses.count {
+                    verMap := Map()
+                    verMap["verse"] := String(i)
+                    verMap["text"] := verses[String(i)]
+                    chpMap["verses"].Push(verMap)
+                    i++
+                }
+                tempMap[book]["chapters"].Push(chpMap)
+                j++
+            }
+            tempMap[book]["book"] := book
+            tempMap[book]["count"] := tempMap[book]["chapters"].Length
+            tempMap[book].Delete(book)
+        }
     }
     return tempMap
 }
@@ -26,6 +192,7 @@ ChunkBooksIntoPages() {
     tempMap := Map()
 
     pageCounter := 1
+    totalMCBookNum := 0
     for book, v in bible {
         tempMap[book] := Map()
         tempMap[book]["Pages"] := []
@@ -70,18 +237,24 @@ ChunkBooksIntoPages() {
         tempMap[book]["Pages"].Push(pageString)
         pageCounter++
         tempMap[book]["PageNum"] := pageCounter
+        tempMap[book]["MCBookNum"] := Ceil(pageCounter / 100) ;100 pages per MC book
+        totalMCBookNum += Ceil(pageCounter / 100)
         pageCounter := 1
     }
+    tempMap["TotalMCBookNum"] := totalMCBookNum
 
     return tempMap
 }
 
 WriteAllBooks(*) {
+    if MsgBox("You will need " . ChunkedBible["TotalMCBookNum"] . " Minecraft books to write the whole Bible.`n`nReady?", "MC Bible Writer", 1) == "Cancel" {
+        return
+    }
     for book, v in ChunkedBible {
-        if MsgBox("Open new book", "MC Bible Writer", 1) == "Cancel" {
+        if MsgBox("Open a new Book and Quill", "MC Bible Writer", 1) == "Cancel" {
             return
         }
-        Sleep(3000)
+        Sleep(newBookSleep * 1000)
         subBook := 100
         for i, page in v["Pages"] {
             if i = subBook + 1 {
@@ -94,10 +267,10 @@ WriteAllBooks(*) {
                 subBook += 100
 
                 ;Ask for new book
-                if MsgBox("Open new book", "MC Bible Writer", 1) == "Cancel" {
+                if MsgBox("Open a new Book and Quill", "MC Bible Writer", 1) == "Cancel" {
                     return
                 }
-                Sleep(3000)
+                Sleep(newBookSleep * 1000)
             }
             text := ScrubText(page)
             SendText(text)
@@ -121,10 +294,13 @@ WriteAllBooks(*) {
 WriteOneBooks(*) {
     book := InputBox("Which book to write?", "Single Book Writer").Value
     v := ChunkedBible[book]
-    if MsgBox("Open new book", "MC Bible Writer", 1) == "Cancel" {
+    if MsgBox("You will need " . v["MCBookNum"] . " Minecraft books to write " . book . ".`n`nReady?", "Single Book Writer", 1) == "Cancel" {
         return
     }
-    Sleep(3000)
+    if MsgBox("Open a new Book and Quill", "Single Book Writer", 1) == "Cancel" {
+        return
+    }
+    Sleep(newBookSleep * 1000)
     subBook := 100
     for i, page in v["Pages"] {
         if i = subBook + 1 {
@@ -137,10 +313,10 @@ WriteOneBooks(*) {
             subBook += 100
 
             ;Ask for new book
-            if MsgBox("Open new book", "MC Bible Writer", 1) == "Cancel" {
+            if MsgBox("Open a new Book and Quill", "Single Book Writer", 1) == "Cancel" {
                 return
             }
-            Sleep(3000)
+            Sleep(newBookSleep * 1000)
         }
         text := ScrubText(page)
         SendText(text)
@@ -173,7 +349,10 @@ ScrubText(text) {
 Hotkey "F9", WriteOneBooks
 Hotkey "F10", WriteAllBooks
 Hotkey "F8", EndScript
-HotKey "F7", PageLookup
+
+;For testing and debugging
+;HotKey "F7", PageLookup
+;HotKey "F7", ReadJohn
 
 EndScript(*) {
     ExitApp(0)
@@ -187,13 +366,13 @@ PageLookup(*) {
     MsgBox(ChunkedBible[book]["Pages"][Page])
 }
 
-/*
-MsgBox("Open new book")
-Sleep(3000)
-text := ScrubText(ChunkedBible["John"]["Pages"][1])
-SendText(text)
-*/
-
+ReadJohn(*) {
+    for i, Page in ChunkedBible["John"]["Pages"] {
+        if MsgBox(ChunkedBible["John"]["Pages"][i], "John Page: " . i, 1) == "Cancel" {
+            break
+        }
+    }
+}
 
 /*
 ;how many minecraft books per bible book
@@ -205,6 +384,7 @@ MsgBox(bruh)
 */
 
 /*
+;how many minecraft books total
 bruh := 0
 for book, v in ChunkedBible {
     x := v["PageNum"] / 100
@@ -217,13 +397,8 @@ MsgBox(bruh)
 
 
 
-/*
-for i, Page in ChunkedBible["John"]["Pages"] {
-    if MsgBox(ChunkedBible["John"]["Pages"][i], "John Page: " . i, 1) == "Cancel" {
-        break
-    }
-}
-*/
+
+
 
 ;MsgBox(ChunkedBible["John"]["Pages"][1])
 ;MsgBox(bible["John"]["chapters"][3]["verses"][16]["text"])
